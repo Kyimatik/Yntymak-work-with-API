@@ -15,45 +15,15 @@ from aiogram.utils.markdown import hbold
 from aiogram.fsm.context import FSMContext
 from aiogram.types import ReplyKeyboardMarkup , InlineKeyboardMarkup , InlineKeyboardButton , KeyboardButton , ReplyKeyboardRemove 
 
-from aiogram.fsm.state import StatesGroup , State
 
 
 
-
-
-#Отправка рассылки всем пользователям которые есть в базе данных.
-class sendall(StatesGroup):
-    getphoto = State()
-    gettext = State()
-    getbutton = State() #
-    getlink = State() #
-
-
-
-
-#TOKEN = "7352009164:AAHD84f31ubJwRvt9JX8AIuXeaSaY7bOSBw"
-TOKEN = "7377143690:AAGob-Uf_jV3-bWEvJycGtbV3gTMDDKU0K0"
+#TOKEN = "?"
+TOKEN = "ur token"
 
 bot = Bot(TOKEN)
 dp = Dispatcher()
 router = Router()
-
-
-
-
-def load_data():
-    try:
-        with open('usersdb.json', 'r') as json_file:
-            data = json.load(json_file)
-    except FileNotFoundError:
-        data = {"users": [], "total_users": 0}
-    return data
-
-def save_data(data):
-    with open('usersdb.json', 'w') as json_file:
-        json.dump(data, json_file, indent=4)
-
-
 
 
 # Главная клавиатура
@@ -179,17 +149,6 @@ async def save_data_to_json():
 
 @dp.message(Command("start"))
 async def start(message: Message):
-    data = load_data()
-    
-    user_id = message.from_user.id
-    
-    # Если пользователь еще не был добавлен в базу данных
-    if user_id not in data["users"]:
-        data["users"].append(user_id)
-        data["total_users"] += 1
-        save_data(data)  # Сохраняем обновленные данные
-    
-
     start_text = """Требования к публикацию и содержанию объявлений
 
  При нарушении этих правил пользователь будет заблокирован и больше не сможет опубликовать обьявление
@@ -298,7 +257,7 @@ async def publish(chat_id, user_id):
                   + "\nОбьявление пользователя телеграмм: " + " id:" + str(
         user.tgInfo.id) + "\n\nОпубликовано с помощью телеграмм бота @yntymakitem_bot"
 
-    payload = {'key': 'XGaj8cnRdvAqmIxYxnb4yBWBtPzB8O',
+    payload = {'key': '?',
                'type': 'insert',
                'object': 'item',
                'action': 'add',
@@ -316,7 +275,7 @@ async def publish(chat_id, user_id):
                'price': '0',
                'currency': 'RU',
                'showEmail': '1',
-               'secret': 'XGaj8cnRdvAqmIxYxnb4yBWBtPzB8O',
+               'secret': '?',
                "title[" + 'ru_RU' + "]": user.adInfo.title,
                "description[" + 'ru_RU' + "]": description,
 
@@ -326,7 +285,7 @@ async def publish(chat_id, user_id):
         payload["ajax_photos[]"] = url_for_upload
 
     async with aiohttp.ClientSession() as session:
-        async with session.post('https://yntymak.ru/oc-content/plugins/rest/api.php', params=payload) as response:
+        async with session.post('', params=payload) as response:
             response_text = await response.text()
 
     user.adInfo = AdInfo()
@@ -400,158 +359,9 @@ async def upload_photo(user_id):
 
 
 
-#########################################################################################################################################################
-# Кнопка Да или нет
-buttonyesorno = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Да",callback_data="yesbutton")
-        ],
-        [
-            InlineKeyboardButton(text="Нет",callback_data="nobutton")
-                                
-        ]
-    ],
-    resize_keyboard=True
-)
-# Подтверждение
-confirmationyesorno = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Да",callback_data="yesconfirm")
-        ],
-        [
-            InlineKeyboardButton(text="Нет",callback_data="noconfirm")
-                                
-        ]
-    ],
-    resize_keyboard=True
-)
-
-# Фото да или нет
-photoyesorno = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Да",callback_data="yesphoto")
-        ],
-        [
-            InlineKeyboardButton(text="Нет",callback_data="nophoto")
-                                
-        ]
-    ],
-    resize_keyboard=True
-)
 
 
-admin_id = "6355200375"
 
-# Функция запуска рассылки
-async def start_sendall(message: types.Message, state: FSMContext):
-    if str(message.from_user.id) == admin_id:
-        await message.answer(
-            f'Здравсвтуйте <b>{message.from_user.first_name}</b>. Хотите ли вы разослать сообщение с фоткой?',
-            parse_mode="HTML",
-            reply_markup=photoyesorno
-        )
-    else:
-        await message.answer("Error!")
-
-async def process_photo_choice(callback: types.CallbackQuery, state: FSMContext):
-    if callback.data == "yesphoto":
-        await callback.message.answer("Отправьте фотку")
-        await state.set_state(sendall.getphoto)
-    else:
-        await callback.message.answer("Теперь отправьте основной текст!")
-        await state.set_state(sendall.gettext)
-
-async def get_photo2(message: types.Message, state: FSMContext):
-    await state.update_data(getphoto=message.photo[-1].file_id)
-    await message.answer("Теперь отправьте основной текст!")
-    await state.set_state(sendall.gettext)
-
-async def gettext123(message: types.Message, state: FSMContext):
-    await state.update_data(gettext=message.text)
-    await message.answer("Продолжить с кнопкой или нет?", reply_markup=buttonyesorno)
-
-async def process_button_choice(callback: types.CallbackQuery, state: FSMContext):
-    if callback.data == "yesbutton":
-        await callback.message.answer("Отправьте текст кнопки!")
-        await state.set_state(sendall.getbutton)
-    else:
-        await send_preview(callback.message, state)
-
-async def send_preview(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    if 'getphoto' in data and data['getphoto']:
-        await bot.send_photo(
-            chat_id=message.chat.id,
-            photo=data['getphoto'],
-            caption=data['gettext'],
-            reply_markup=create_keyboard(data)
-        )
-    else:
-        await message.answer(
-            text=data['gettext'],
-            reply_markup=create_keyboard(data)
-        )
-    await message.answer("Начинаем отправлять?", reply_markup=confirmationyesorno)
-
-async def getbutton123(message: types.Message, state: FSMContext):
-    await state.update_data(getbutton=message.text)
-    await message.answer("Теперь отправьте ссылку, которую кнопка будет содержать:")
-    await state.set_state(sendall.getlink)
-
-async def getlink342(message: types.Message, state: FSMContext):
-    await state.update_data(getlink=message.text)
-    await send_preview(message, state)
-
-def create_keyboard(data):
-    if 'getbutton' in data and data['getbutton'] and 'getlink' in data and data['getlink']:
-        return InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text=data['getbutton'], url=data['getlink'])]
-            ],
-            resize_keyboard=True
-        )
-    return None
-
-async def confirm_send(callback: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    added_keyboards = create_keyboard(data)
-
-    data1 = load_data()
-
-    if 'users' not in data1:
-        await callback.message.answer("Ошибка: данные не содержат информации о пользователях.")
-        await state.clear()
-        return
-    
-    # Получение списка user_ids из JSON данных
-    user_ids = data1['users']
-
-    j = 0
-    for i in user_ids:
-        try:
-            if 'getphoto' in data and data['getphoto']:
-                await bot.send_photo(
-                    chat_id=i,
-                    photo=data['getphoto'],
-                    caption=data['gettext'],
-                    reply_markup=added_keyboards
-                )
-            else:
-                await bot.send_message(
-                    chat_id=i,
-                    text=data['gettext'],
-                    reply_markup=added_keyboards
-                )
-            j += 1
-        except Exception as e:
-            print(f"Ошибка при отправке сообщения пользователю {i}: {e}")
-        await asyncio.sleep(0.33)  # Используйте asyncio.sleep вместо time.sleep для асинхронного кода
-
-    await callback.message.answer(f"Количество отправленных рассылок: {j}")
-    await state.clear()
 
 
 
